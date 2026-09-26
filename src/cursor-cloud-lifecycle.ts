@@ -607,7 +607,7 @@ function formatCloudLifecycleError(error: unknown, apiKey: string | undefined): 
 }
 
 async function resolveCloudLifecycleMutationApiKey(ctx: CloudLifecycleCommandContext): Promise<string | undefined> {
-	const apiKey = resolveCursorApiKey(await (runtimeApiKeyResolverForTests?.() ?? ctx.modelRegistry.getApiKeyForProvider("cursor")));
+	const apiKey = resolveCursorApiKey(await (runtimeApiKeyResolverForTests?.() ?? ctx.modelRegistry.getApiKeyForProvider("cursor-sdk")));
 	if (apiKey) return apiKey;
 	ctx.ui.notify("Cursor cloud lifecycle mutations require a Cursor API key; run /login or set CURSOR_API_KEY, then retry.", "error");
 	return undefined;

@@ -1,12 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type {
 	ModelListItem,
 	ModelParameterDefinition,
 	ModelParameterValue,
 	ModelSelection,
 } from "@cursor/sdk";
-import type { ProviderModelConfig } from "@oh-my-pi/pi-coding-agent";
+import { getAgentDir, type ProviderModelConfig } from "@oh-my-pi/pi-coding-agent";
 import { getCursorModelSelectionIdentities } from "../shared/cursor-model-selection-identities.mjs";
 import { loadContextWindowCache } from "./context-window-cache.js";
+import { CURSOR_MODEL_PRICES, type CursorModelPrice } from "./cursor-model-prices.js";
 import { loadCursorSdk } from "./cursor-sdk-runtime.js";
 import { resolveCursorApiKey, resolveCursorRuntimeApiKey } from "./cursor-api-key.js";
 import { scrubSensitiveText } from "./cursor-sensitive-text.js";
@@ -160,7 +163,9 @@ function parseContextWindow(value: string): number | undefined {
 function getDefaultParams(item: ModelListItem): ModelParameterValue[] {
 	if (!item.variants?.length) return [];
 	const defaultVariant = item.variants.find((variant) => variant.isDefault) ?? item.variants[0];
-	return cloneParams(defaultVariant?.params ?? []);
+	const params = cloneParams(defaultVariant?.params ?? []);
+	// Fast mode bills at a premium; opt in only through an explicit "@fast" id.
+	return getParameter(item, "fast") ? replaceParam(params, "fast", "false") : params;
 }
 
 function replaceParam(
@@ -245,6 +250,34 @@ function toMetadata(
 	};
 }
 
+let cursorPrices: Record<string, Partial<CursorModelPrice>> | undefined;
+
+// ~/.omp/agent/cursor-sdk-prices.json entries override the bundled table key by key.
+function loadCursorPrices(): Record<string, Partial<CursorModelPrice>> {
+	if (cursorPrices) return cursorPrices;
+	let userPrices: Record<string, Partial<CursorModelPrice>> = {};
+	try {
+		userPrices = JSON.parse(readFileSync(join(getAgentDir(), "cursor-sdk-prices.json"), "utf8"));
+	} catch {}
+	cursorPrices = { ...CURSOR_MODEL_PRICES, ...userPrices };
+	return cursorPrices;
+}
+
+// A fast or context-sized model without its own entry falls back to the base price.
+function getCursorModelCost(metadata: CursorModelMetadata): CursorModelPrice {
+	const prices = loadCursorPrices();
+	const base = metadata.baseModelId;
+	const context = metadata.defaultParams.find((param) => param.id === "context")?.value;
+	const fast = metadata.fastOverride ?? metadata.defaultFast;
+	const keys = [
+		...(fast ? [context && `${base}@${context}@fast`, `${base}@fast`] : []),
+		context && `${base}@${context}`,
+		base,
+	].filter((key): key is string => Boolean(key));
+	const price = keys.map((key) => prices[key]).find(Boolean);
+	return { ...ZERO_COST, ...price };
+}
+
 function toModelConfig(metadata: CursorModelMetadata, name: string): ProviderModelConfig {
 	return {
 		id: metadata.piModelId,
@@ -252,7 +285,7 @@ function toModelConfig(metadata: CursorModelMetadata, name: string): ProviderMod
 		reasoning: metadata.supportsReasoning,
 		...(metadata.thinkingLevelMap ? { thinkingLevelMap: metadata.thinkingLevelMap } : {}),
 		input: [...TEXT_AND_IMAGE_INPUT],
-		cost: { ...ZERO_COST },
+		cost: getCursorModelCost(metadata),
 		contextWindow: metadata.contextWindow,
 		maxTokens: FALLBACK_MAX_TOKENS,
 	};

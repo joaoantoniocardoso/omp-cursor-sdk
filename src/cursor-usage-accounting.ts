@@ -160,7 +160,19 @@ export function applyCursorUsage(
 	const usage = sdkUsage?.runtime === "local" ? sdkUsage.turn : undefined;
 	if (usage && isCursorSdkUsageSafeForPiMessage(usage, model)) {
 		applyCursorSdkUsage(partial, usage);
-		return;
+	} else {
+		applyCursorApproximateUsage(partial, model, context, sessionInputTokens);
 	}
-	applyCursorApproximateUsage(partial, model, context, sessionInputTokens);
+	applyCursorCost(partial, model);
+}
+
+function applyCursorCost(partial: AssistantMessage, model: Model<Api>): void {
+	const rates = model.cost;
+	if (!rates) return;
+	const { usage } = partial;
+	const input = (usage.input * (rates.input ?? 0)) / 1e6;
+	const output = (usage.output * (rates.output ?? 0)) / 1e6;
+	const cacheRead = (usage.cacheRead * (rates.cacheRead ?? 0)) / 1e6;
+	const cacheWrite = (usage.cacheWrite * (rates.cacheWrite ?? 0)) / 1e6;
+	usage.cost = { input, output, cacheRead, cacheWrite, total: input + output + cacheRead + cacheWrite };
 }

@@ -7,14 +7,24 @@ This is the OMP port of [pi-cursor-sdk](https://github.com/fitchmultz/pi-cursor-
 ## Install (OMP)
 
 ```bash
-omp plugin install --force git:github.com/LoneExile/omp-cursor-sdk
+git clone https://github.com/joaoantoniocardoso/omp-cursor-sdk.git
+cd omp-cursor-sdk && bun install
+omp plugin link .
 ```
+
+Linking a local clone keeps the bundled `@modelcontextprotocol/sdk` and `@hono/node-server` installed; a `git:` install skips bundled dependencies.
 
 Set `CURSOR_API_KEY` in `~/.omp/.env` (an API key from Cursor Dashboard -> API Keys). Start a fresh OMP session, then use any Cursor model:
 
 ```bash
-omp --model cursor/composer-2.5
+omp --model cursor-sdk/composer-2.5
 ```
+
+### Fork changes
+
+- The provider id is `cursor-sdk`, so it runs alongside OMP's built-in `cursor` provider instead of replacing it.
+- Fast mode is off by default for every model; select an `@fast` id to opt in.
+- Turns are priced from Cursor's published per-token rates (`src/cursor-model-prices.ts`). Entries in `~/.omp/agent/cursor-sdk-prices.json` (USD per million tokens, same keys) override the bundled table.
 
 Model variants (mirroring the Cursor picker's Fast toggle and Effort control):
 

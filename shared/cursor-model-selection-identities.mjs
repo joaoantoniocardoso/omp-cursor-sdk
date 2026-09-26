@@ -2,11 +2,6 @@ function getParameter(model, id) {
 	return (model.parameters ?? []).find((parameter) => parameter.id === id);
 }
 
-function getDefaultParam(model, id) {
-	const variant = (model.variants ?? []).find((candidate) => candidate.isDefault) ?? model.variants?.[0];
-	return variant?.params?.find((param) => param.id === id)?.value.toLowerCase();
-}
-
 function getAmbiguousAliases(models) {
 	const ownersByAlias = new Map();
 	for (const model of models) {
@@ -53,7 +48,7 @@ export function getCursorModelSelectionIdentities(models) {
 		const contexts = contextValues.length > 0 ? contextValues : [undefined];
 		const hasFast = getParameter(model, "fast") !== undefined;
 		const fastOverrides = hasFast ? [undefined, true, false] : [undefined];
-		const defaultFast = getDefaultParam(model, "fast");
+		const defaultFast = hasFast ? "false" : undefined;
 
 		for (const selectionModelId of getSelectableIds(model, reservedIds, ambiguousAliases)) {
 			for (const context of contexts) {

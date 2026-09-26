@@ -1,6 +1,6 @@
 import type { ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 
-export const CURSOR_PROVIDER = "cursor";
+export const CURSOR_PROVIDER = "cursor-sdk";
 export const CURSOR_SDK_API = "cursor-sdk";
 
 export type CursorModelRef =

@@ -42,7 +42,7 @@ function createCursorProviderConfig(models: ProviderModelConfig[]): ProviderConf
 }
 
 function registerCursorProvider(pi: Pick<ExtensionAPI, "registerProvider">, models: ProviderModelConfig[]): void {
-	pi.registerProvider("cursor", createCursorProviderConfig(models));
+	pi.registerProvider("cursor-sdk", createCursorProviderConfig(models));
 }
 
 export default async function (pi: CursorExtensionApi) {
@@ -75,7 +75,7 @@ export default async function (pi: CursorExtensionApi) {
 		description: "Refresh the live Cursor model catalog without restarting pi",
 		handler: async (_args, ctx) => {
 			let refreshFallbackIssue: CursorModelFallbackIssue | undefined;
-			const apiKey = resolveCursorApiKey(await ctx.modelRegistry.getApiKeyForProvider("cursor"));
+			const apiKey = resolveCursorApiKey(await ctx.modelRegistry.getApiKeyForProvider("cursor-sdk"));
 			const refreshedModels = await discoverModels({
 				apiKey,
 				forceRefresh: true,
